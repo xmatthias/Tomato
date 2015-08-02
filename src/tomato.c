@@ -42,11 +42,10 @@ static int passed_time() {
 
 time_t get_diff() {
   int animate_shift = animate_time_factor * (ANIMATION_NORMALIZED_MAX - animate_time) / (ANIMATION_NORMALIZED_MAX - ANIMATION_NORMALIZED_MIN);
-  time_t diff = settings.current_duration - passed_time() - animate_shift;
+  time_t diff = settings.end_time - time( NULL); // - animate_shift;
   if (diff < 0) {
     diff = 0;
   } else if (diff > max_time) {
-    settings.current_duration -= (diff - max_time);
     diff = max_time;
   }
   return diff;
@@ -123,23 +122,57 @@ static void fire_switch_screen_animation(bool relax_to_work) {
   animation_schedule((Animation*) relax_animation);
 }
 
+
+void cancel_wakeup() {
+	
+	wakeup_cancel(settings.wakeup_id);
+	settings.wakeup_id = -1;
+	persist_delete(WAKEUP_ID_KEY);
+}
+
+//get's the timestamp of the current endtime.
+void get_wakeup_query(){
+	if (settings.wakeup_id > 0) {
+	   wakeup_query(settings.wakeup_id, &settings.end_time);
+	   //TODO update UI
+    }
+}
+
+void set_wakeup(time_t wakeup_time, int32_t reason) {
+	 settings.wakeup_id = wakeup_schedule(wakeup_time, reason, false);
+	 if (settings.wakeup_id <= 0) {
+		 //error... what would we do here?
+	 }
+	 save_settings(settings);
+}
+
+void update_end_time(time_t new_time){
+	settings.end_time = new_time;
+	//cancel existing wakeup-call
+	if (settings.wakeup_id != -1) {
+	  cancel_wakeup();
+	}
+	set_wakeup(new_time, settings.state);
+	//TODO update_UI...
+}
+
 void toggle_pomodoro_relax(int skip) {
   if (settings.state == POMODORO_STATE) {
     if (!skip) {
       settings.calendar.sets[0]++;
     }
     settings.state = BREAK_STATE;
-    settings.current_duration = (
-      settings.long_break_enabled &&
-      ((settings.calendar.sets[0] - 1) % settings.long_break_delay) == settings.long_break_delay - 1) ?
-        settings.long_break_duration * 60 :
-        settings.break_duration * 60;
-    vibes_short_pulse();
+        
+    //update_end_time(time(NULL) + (
+		  //settings.long_break_enabled &&
+		  //((settings.calendar.sets[0] - 1) % settings.long_break_delay) == settings.long_break_delay - 1) ?
+			//settings.long_break_duration * 60 :
+			//settings.break_duration * 60);
+	update_end_time(time(NULL) + 5*60);		
     fire_switch_screen_animation(false);
   } else {
     settings.state = POMODORO_STATE;
-    settings.current_duration = settings.pomodoro_duration * 60;
-    vibes_double_pulse();
+    update_end_time(time(NULL) + settings.pomodoro_duration * 60);
     fire_switch_screen_animation(true);
   }
 }
@@ -225,7 +258,7 @@ void down_longclick_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 void down_click_handler(ClickRecognizerRef recognizer, void *context) {
-  settings.current_duration += increment_time;
+  update_end_time(settings.end_time - increment_time);
   if (settings.state == POMODORO_STATE) {
     animate_time_factor = increment_time;
   }
@@ -233,7 +266,7 @@ void down_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 void up_click_handler(ClickRecognizerRef recognizer, void *context) {
-  settings.current_duration -= increment_time;
+  update_end_time(settings.end_time + increment_time);
   if (settings.state == POMODORO_STATE) {
     animate_time_factor = -increment_time;  
   }
@@ -248,6 +281,31 @@ void select_click_handler(ClickRecognizerRef recognizer, void *context) {
   show_iteration();
 }
 
+
+static void wakeup_handler(WakeupId id, int32_t reason) {
+  //Delete persistent storage value
+  persist_delete(WAKEUP_ID_KEY);
+  settings.wakeup_id = -1;
+  window_stack_push(window, false);
+  settings.state = reason;
+  if (reason == POMODORO_STATE) {
+	vibes_double_pulse();
+  }
+  else if (reason == BREAK_STATE) {
+    vibes_short_pulse();
+  }
+  else {
+	  //should not happen...?
+    vibes_double_pulse();
+    vibes_double_pulse();
+    vibes_double_pulse();
+  }
+  toggle_pomodoro_relax(false);
+}
+
+
+
+// used only for UI-updates - vibrate is done via app-wakeup now.
 static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
   now = *tick_time;
   if (units_changed & MINUTE_UNIT) {
@@ -262,11 +320,6 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
     return;
   }
 
-  if(passed_time() > settings.current_duration) {
-    settings.last_time = time(NULL);
-    toggle_pomodoro_relax(false);
-  }
-  
   if (units_changed & SECOND_UNIT) {
     if (settings.state == BREAK_STATE) {
       update_relax_minute();
@@ -390,16 +443,25 @@ static void init(void) {
   window_set_click_config_provider(window, config_provider);
   
   window_set_window_handlers(window, (WindowHandlers) {
-	  .load = window_load,
+	.load = window_load,
     .unload = window_unload,
     .appear = window_appear,
     .disappear = window_disappear
   });
   
+  if (launch_reason() == APP_LAUNCH_WAKEUP) {
+    // If woken by wakeup event, get the event display "tea is ready"
+    int32_t reason = 0;
+    if (wakeup_get_launch_event(&settings.wakeup_id, &reason)) {
+      wakeup_handler(settings.wakeup_id, reason);
+    }
+  }
+  
   const bool animated = true;
   window_stack_push(window, animated);
   
   tick_timer_service_subscribe(SECOND_UNIT, handle_tick);
+  wakeup_service_subscribe(wakeup_handler);
 }
 
 static void deinit(void) {
