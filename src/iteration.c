@@ -12,7 +12,10 @@ static TextLayer *s_count_layer;
 static void initialise_ui(void) {
   s_window = window_create();
   window_set_background_color(s_window, GColorBlack);
+  
+  #ifdef PBL_SDK_2
   window_set_fullscreen(s_window, true);
+  #endif
   
   s_res_image_count = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_COUNT);
   s_res_font_roboto_70 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ROBOTO_70));

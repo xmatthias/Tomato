@@ -16,8 +16,11 @@ static MenuLayer *s_menu_layer;
 
 static void initialise_ui(void) {
   s_window = window_create();
-  window_set_fullscreen(s_window, false);
   
+  #ifdef PBL_SDK_2
+	window_set_fullscreen(s_window, false);
+  #endif  
+
   // s_menu_layer
   s_menu_layer = menu_layer_create(GRect(0, 0, 144, 152));
   menu_layer_set_click_config_onto_window(s_menu_layer, s_window);

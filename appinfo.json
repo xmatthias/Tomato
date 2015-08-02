@@ -36,18 +36,18 @@
                 "type": "png"
             },
             {
-                "characterRegex": "[0-9:.]",
-                "file": "fonts/Digital Dismay.ttf",
-                "name": "FONT_DD_50",
-                "type": "font"
-            },
-            {
-                "characterRegex": "[0-9:.]",
-                "file": "fonts/Digital Dismay.ttf",
-                "name": "FONT_DD_24",
-                "type": "font"
-            },
-            {
+        "characterRegex": "[0-9:.]",
+        "file": "fonts/Digital-Dismay.ttf",
+        "name": "FONT_DD_50",
+        "type": "font"
+      },
+      {
+        "characterRegex": "[0-9:.]",
+        "file": "fonts/Digital-Dismay.ttf",
+        "name": "FONT_DD_24",
+        "type": "font"
+      },
+      {
                 "file": "images/action_icon_minus.png",
                 "name": "IMAGE_ACTION_DECREMENT",
                 "type": "png"
@@ -65,5 +65,10 @@
     "versionLabel": "1.0",
     "watchapp": {
         "watchface": false
-    }
+  },
+  "targetPlatforms": [
+    "aplite",
+    "basalt"
+  ],
+  "sdkVersion": "3"
 }

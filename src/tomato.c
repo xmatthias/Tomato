@@ -220,6 +220,10 @@ void up_longclick_handler(ClickRecognizerRef recognizer, void *context) {
   update_time(false);
 }
 
+void down_longclick_handler(ClickRecognizerRef recognizer, void *context) {
+	
+}
+
 void down_click_handler(ClickRecognizerRef recognizer, void *context) {
   settings.current_duration += increment_time;
   if (settings.state == POMODORO_STATE) {
@@ -378,7 +382,10 @@ static void init(void) {
   count_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_COUNT);  
 
   window = window_create();
-  window_set_fullscreen(window, true);
+  
+  #ifdef PBL_SDK_2
+	window_set_fullscreen(window, true);
+  #endif
   
   window_set_click_config_provider(window, config_provider);
   

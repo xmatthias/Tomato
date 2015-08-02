@@ -13,7 +13,10 @@ static TextLayer *title_text_layer;
 
 static void initialise_ui(void) {
   s_window = window_create();
+  
+  #ifdef PBL_SDK_2
   window_set_fullscreen(s_window, false);
+  #endif
   
   s_res_image_action_increment = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ACTION_INCREMENT);
   s_res_image_action_decrement = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ACTION_DECREMENT);
