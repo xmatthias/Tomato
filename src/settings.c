@@ -65,7 +65,6 @@ Calendar read_calendar(const uint32_t key, Calendar def_value) {
 
 TomatoSettings get_default_settings() {
   TomatoSettings default_settings = {
-    .last_time = time(NULL),
     .state = STATE_DEFAULT,
     .calendar = CALENDAR_DEFAULT,
     .pomodoro_duration = pomodoro_duration_params.default_value,
@@ -84,7 +83,6 @@ TomatoSettings read_settings() {
   TomatoSettings default_settings = get_default_settings();
   
   TomatoSettings settings = {
-    .last_time = read_int(LAST_TIME_KEY, default_settings.last_time),
     .state = read_int(STATE_KEY, default_settings.state),
     .calendar = read_calendar(CALENDAR_KEY, default_settings.calendar),
     .pomodoro_duration = read_int(POMODORO_DURATION_KEY, default_settings.pomodoro_duration),
@@ -96,22 +94,10 @@ TomatoSettings read_settings() {
     .wakeup_id = read_int(WAKEUP_ID_KEY, default_settings.wakeup_id),
   };
   
-  int time_passed = default_settings.last_time - settings.last_time;
-
-  if (time_passed > MAX_ITERATION_IDLE) {
-    settings.calendar = default_settings.calendar;
-  }
-  
-  if (time_passed > MAX_APP_IDLE) {
-    settings.last_time = default_settings.last_time;
-    settings.state = default_settings.state;
-  }
-  
   return settings;
 }
 
 void save_settings(TomatoSettings settings) {
-  persist_write_int(LAST_TIME_KEY, settings.last_time);
   persist_write_int(STATE_KEY, settings.state);
   Calendar calendar = settings.calendar;
   persist_write_data(CALENDAR_KEY, &calendar, sizeof(calendar));
@@ -120,7 +106,6 @@ void save_settings(TomatoSettings settings) {
 }
 
 void reset_settings(void) {
-  persist_delete(LAST_TIME_KEY);
   persist_delete(STATE_KEY);
   persist_delete(CALENDAR_KEY);
   persist_delete(POMODORO_DURATION_KEY);

@@ -7,14 +7,18 @@ static Window *window;
 
 static BitmapLayer *work_layer;
 static BitmapLayer *relax_layer;
+static BitmapLayer *pause_layer;
 
 static PropertyAnimation *work_animation;
 static PropertyAnimation *relax_animation;
+static PropertyAnimation *pause_animation;
 
 static TextLayer *clock_layer;
 static TextLayer *relax_minute_layer;
 static TextLayer *relax_second_layer;
 static Layer *scale_layer;
+
+static TextLayer *pause_text_layer;
 
 static GFont time_font;
 
@@ -35,10 +39,6 @@ static bool is_animating;
 static int max_time = 59 * 60;
 
 static struct tm now;
-
-static int passed_time() {
-  return time(NULL) - settings.last_time;
-}
 
 time_t get_diff() {
   int animate_shift = animate_time_factor * (ANIMATION_NORMALIZED_MAX - animate_time) / (ANIMATION_NORMALIZED_MAX - ANIMATION_NORMALIZED_MIN);
@@ -99,27 +99,72 @@ void on_switch_screen_animation_stopped(Animation *anim, bool finished, void *co
 }
 
 static void fire_switch_screen_animation(bool relax_to_work) {
-  GRect from_frame = layer_get_frame(bitmap_layer_get_layer(work_layer));
-  GRect to_frame = relax_to_work ? 
-    (GRect) { .origin = { 0, 0 }, .size = from_frame.size } :
-    (GRect) { .origin = { -from_frame.size.w, 0 }, .size = from_frame.size };
+  
+  bool right_to_left = relax_to_work;
+  bool bottom_to_top = settings.state == PAUSED_STATE;
+  GRect test = layer_get_frame(bitmap_layer_get_layer(work_layer));
+  if (bottom_to_top || test.origin.y != 0) {
+	  //move to/from top ...
+		GRect from_frame = layer_get_frame(bitmap_layer_get_layer(work_layer));
+		GRect to_frame = bottom_to_top ? 
+		(GRect) { .origin = { test.origin.x > 0 ? -from_frame.size.w : 0, -from_frame.size.h }, .size = from_frame.size } :
+		(GRect) { .origin = { test.origin.x > 0 ? -from_frame.size.w : 0, 0 }, .size = from_frame.size };
+		  
+		 work_animation = property_animation_create_layer_frame(bitmap_layer_get_layer(work_layer), &from_frame, &to_frame);
+		  animation_set_handlers((Animation*) work_animation, (AnimationHandlers) {
+			.stopped = (AnimationStoppedHandler) on_switch_screen_animation_stopped
+		  }, NULL);
+		  animation_schedule((Animation*) work_animation);
+		  
+		from_frame = layer_get_frame(bitmap_layer_get_layer(relax_layer));
+		to_frame = bottom_to_top ? 
+		(GRect) { .origin = { from_frame.size.w, -from_frame.size.h }, .size = from_frame.size } :
+		(GRect) { .origin = { from_frame.size.w, 0 }, .size = from_frame.size };
+		  
+		 relax_animation = property_animation_create_layer_frame(bitmap_layer_get_layer(relax_layer), &from_frame, &to_frame);
+		  animation_set_handlers((Animation*) relax_animation, (AnimationHandlers) {
+			.stopped = (AnimationStoppedHandler) on_switch_screen_animation_stopped
+		  }, NULL);
+		  animation_schedule((Animation*) relax_animation);
+	  
+	    from_frame = layer_get_frame(bitmap_layer_get_layer(pause_layer));
+		to_frame = bottom_to_top ? 
+		(GRect) { .origin = { from_frame.origin.x, 0 }, .size = from_frame.size } :
+		(GRect) { .origin = { from_frame.origin.x, from_frame.size.h }, .size = from_frame.size };
+		  
+		 pause_animation = property_animation_create_layer_frame(bitmap_layer_get_layer(pause_layer), &from_frame, &to_frame);
+		  animation_set_handlers((Animation*) pause_animation, (AnimationHandlers) {
+			.stopped = (AnimationStoppedHandler) on_switch_screen_animation_stopped
+		  }, NULL);
+		  animation_schedule((Animation*) pause_animation);
+		
+  }
+  else
+  {
+	  GRect from_frame = layer_get_frame(bitmap_layer_get_layer(work_layer));
+	  
+	  GRect to_frame = right_to_left ? 
+		(GRect) { .origin = { 0, 0 }, .size = from_frame.size } :
+		(GRect) { .origin = { -from_frame.size.w, 0 }, .size = from_frame.size };
 
-  work_animation = property_animation_create_layer_frame(bitmap_layer_get_layer(work_layer), &from_frame, &to_frame);
-  animation_set_handlers((Animation*) work_animation, (AnimationHandlers) {
-    .stopped = (AnimationStoppedHandler) on_switch_screen_animation_stopped
-  }, NULL);
-  animation_schedule((Animation*) work_animation);
+	  work_animation = property_animation_create_layer_frame(bitmap_layer_get_layer(work_layer), &from_frame, &to_frame);
+	  animation_set_handlers((Animation*) work_animation, (AnimationHandlers) {
+		.stopped = (AnimationStoppedHandler) on_switch_screen_animation_stopped
+	  }, NULL);
+	  animation_schedule((Animation*) work_animation);
 
-  from_frame = layer_get_frame(bitmap_layer_get_layer(relax_layer));
-  to_frame = relax_to_work ? 
-    (GRect) { .origin = { from_frame.size.w, 0 }, .size = from_frame.size } :
-    (GRect) { .origin = { 0, 0 }, .size = from_frame.size };
+	  from_frame = layer_get_frame(bitmap_layer_get_layer(relax_layer));
+	  to_frame = right_to_left ? 
+		(GRect) { .origin = { from_frame.size.w, 0 }, .size = from_frame.size } :
+		(GRect) { .origin = { 0, 0 }, .size = from_frame.size };
 
-  relax_animation = property_animation_create_layer_frame(bitmap_layer_get_layer(relax_layer), &from_frame, &to_frame);
-  animation_set_handlers((Animation*) relax_animation, (AnimationHandlers) {
-    .stopped = (AnimationStoppedHandler) on_switch_screen_animation_stopped
-  }, NULL);
-  animation_schedule((Animation*) relax_animation);
+	  relax_animation = property_animation_create_layer_frame(bitmap_layer_get_layer(relax_layer), &from_frame, &to_frame);
+	  animation_set_handlers((Animation*) relax_animation, (AnimationHandlers) {
+		.stopped = (AnimationStoppedHandler) on_switch_screen_animation_stopped
+	  }, NULL);
+	  animation_schedule((Animation*) relax_animation);
+	  
+	}
 }
 
 
@@ -152,8 +197,10 @@ void update_end_time(time_t new_time){
 	if (settings.wakeup_id != -1) {
 	  cancel_wakeup();
 	}
+	if (settings.state == PAUSED_STATE) {
+		return; //don't set wakeup for paused-state...
+	}
 	set_wakeup(new_time, settings.state);
-	//TODO update_UI...
 }
 
 void toggle_pomodoro_relax(int skip) {
@@ -163,17 +210,23 @@ void toggle_pomodoro_relax(int skip) {
     }
     settings.state = BREAK_STATE;
         
-    //update_end_time(time(NULL) + (
-		  //settings.long_break_enabled &&
-		  //((settings.calendar.sets[0] - 1) % settings.long_break_delay) == settings.long_break_delay - 1) ?
-			//settings.long_break_duration * 60 :
-			//settings.break_duration * 60);
-	update_end_time(time(NULL) + 5*60);		
+    update_end_time(time(NULL) + ((
+		  settings.long_break_enabled &&
+		  ((settings.calendar.sets[0] - 1) % settings.long_break_delay) == settings.long_break_delay - 1) ?
+			settings.long_break_duration * 60 :
+			settings.break_duration * 60));
+			
+  //update_end_time(time(NULL) + settings.break_duration * 60);
+			
     fire_switch_screen_animation(false);
-  } else {
+  } else if (settings.state == BREAK_STATE){
     settings.state = POMODORO_STATE;
     update_end_time(time(NULL) + settings.pomodoro_duration * 60);
     fire_switch_screen_animation(true);
+  }
+  else
+  {    
+	  fire_switch_screen_animation(true);
   }
 }
 
@@ -247,14 +300,15 @@ void update_time(bool animate) {
 }
 
 void up_longclick_handler(ClickRecognizerRef recognizer, void *context) {
-  settings.last_time = time(NULL);
   toggle_pomodoro_relax(true);
   
   update_time(false);
 }
 
 void down_longclick_handler(ClickRecognizerRef recognizer, void *context) {
-	
+	settings.state = settings.state == PAUSED_STATE ? POMODORO_STATE : PAUSED_STATE;
+		update_end_time(time(NULL) + (settings.state == POMODORO_STATE ? settings.pomodoro_duration * 60 : 0 ));
+	fire_switch_screen_animation(true);
 }
 
 void down_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -312,7 +366,7 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
     update_clock();
   }
 
-  if (exec_state != RUNNING_EXEC_STATE) {
+  if (exec_state != RUNNING_EXEC_STATE || settings.state == PAUSED_STATE) {
     return;
   }
   
@@ -338,6 +392,7 @@ void config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
   
   window_long_click_subscribe(BUTTON_ID_UP, 300, up_longclick_handler, NULL);
+  window_long_click_subscribe(BUTTON_ID_DOWN, 300, down_longclick_handler, NULL);
 }
 
 static void window_load(Window *window) {
@@ -356,11 +411,18 @@ static void window_load(Window *window) {
   relax_layer = bitmap_layer_create(bounds);
   bitmap_layer_set_bitmap(relax_layer, break_image);
   layer_add_child(window_layer, bitmap_layer_get_layer(relax_layer));
+  
+  //start pause layer
+  bounds = (GRect) { .origin = { 0, window_height }, .size = bounds.size };
+  pause_layer = bitmap_layer_create(bounds);
+  bitmap_layer_set_bitmap(pause_layer, count_image);
+  layer_add_child(window_layer, bitmap_layer_get_layer(pause_layer));
+  //end pause layer
 
   time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DD_24));
   GFont clock_font = fonts_get_system_font(FONT_KEY_ROBOTO_CONDENSED_21);
   GFont relax_font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
-  
+  GFont pause_font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
   const int padding = 6;
   
   bounds = (GRect) { .origin = { 0, 55 }, .size = { window_width, 35 } };
@@ -384,6 +446,15 @@ static void window_load(Window *window) {
   text_layer_set_text_color(relax_second_layer, GColorWhite);
   layer_add_child(bitmap_layer_get_layer(relax_layer), text_layer_get_layer(relax_second_layer));
   
+  bounds = (GRect) { .origin = {0, window_height / 2 - 14}, .size = { window_width, window_height } };
+  pause_text_layer = text_layer_create(bounds);
+  text_layer_set_text_alignment(pause_text_layer, GTextAlignmentCenter);
+  text_layer_set_font(pause_text_layer, pause_font);
+  text_layer_set_background_color(pause_text_layer, GColorClear);
+  text_layer_set_text_color(pause_text_layer, GColorBlack);
+  text_layer_set_text(pause_text_layer, "STOPPED");
+  layer_add_child(bitmap_layer_get_layer(pause_layer), text_layer_get_layer(pause_text_layer));
+  
   const int clock_height = 22;
 
   bounds =  (GRect) { .origin = { 0, window_height - clock_height - padding + 1 }, .size = { window_width, clock_height } };
@@ -398,9 +469,11 @@ static void window_load(Window *window) {
 static void window_unload(Window *window) {
   bitmap_layer_destroy(work_layer);
   bitmap_layer_destroy(relax_layer);
+  bitmap_layer_destroy(pause_layer);
   text_layer_destroy(clock_layer);
   text_layer_destroy(relax_second_layer);
   text_layer_destroy(relax_minute_layer);
+  text_layer_destroy(pause_text_layer);
   fonts_unload_custom_font(time_font);
 }
 
@@ -411,8 +484,14 @@ static void window_appear(Window *window) {
     GRect frame = layer_get_frame(bitmap_layer_get_layer(work_layer));
     layer_set_frame(bitmap_layer_get_layer(work_layer), (GRect) {.origin = { -frame.size.w, 0}, .size = frame.size });
     layer_set_frame(bitmap_layer_get_layer(relax_layer), (GRect) {.origin = { 0, 0}, .size = frame.size });
+    layer_set_frame(bitmap_layer_get_layer(pause_layer), (GRect) {.origin = { 0, frame.size.h}, .size = frame.size });
   }
-
+  if (settings.state == PAUSED_STATE) {
+	GRect frame = layer_get_frame(bitmap_layer_get_layer(work_layer));
+    layer_set_frame(bitmap_layer_get_layer(work_layer), (GRect) {.origin = { 0, -frame.size.h}, .size = frame.size });
+    layer_set_frame(bitmap_layer_get_layer(relax_layer), (GRect) {.origin = { 0, -frame.size.h}, .size = frame.size });
+    layer_set_frame(bitmap_layer_get_layer(pause_layer), (GRect) {.origin = { 0, 0}, .size = frame.size });
+  }
   time_t t = time(NULL);
   now = *localtime(&t);
   update_clock();

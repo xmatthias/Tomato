@@ -1,5 +1,6 @@
 #define POMODORO_STATE 0
 #define BREAK_STATE 1
+#define PAUSED_STATE 2
   
 #define RUNNING_EXEC_STATE 0
 #define PAUSED_EXEC_STATE 1
@@ -10,7 +11,7 @@
 #define INCREMENT_TIME 60
 
 
-#define LAST_TIME_KEY 0
+//#define LAST_TIME_KEY 0
 #define STATE_KEY 1
 //#define CURRENT_DURATION_KEY 2
 #define CALENDAR_KEY 3
@@ -51,7 +52,6 @@ typedef struct Calendar {
 } __attribute__((__packed__)) Calendar;
 
 typedef struct TomatoSettings {
-  int last_time;
   int state;
   Calendar calendar;
   int pomodoro_duration;
