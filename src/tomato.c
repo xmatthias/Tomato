@@ -1,4 +1,4 @@
-#include "pebble.h"
+#include <pebble.h>
 #include "settings.h"
 #include "menu.h"
 #include "iteration.h"
@@ -41,7 +41,7 @@ static int max_time = 59 * 60;
 static struct tm now;
 
 time_t get_diff() {
-  int animate_shift = animate_time_factor * (ANIMATION_NORMALIZED_MAX - animate_time) / (ANIMATION_NORMALIZED_MAX - ANIMATION_NORMALIZED_MIN);
+//  int animate_shift = animate_time_factor * (ANIMATION_NORMALIZED_MAX - animate_time) / (ANIMATION_NORMALIZED_MAX - ANIMATION_NORMALIZED_MIN);
   time_t diff = settings.end_time - time( NULL); // - animate_shift;
   if (diff < 0) {
     diff = 0;
@@ -84,7 +84,12 @@ static void layer_draw_scale(Layer *me, GContext* ctx) {
     round_factor = sin < 0 ? -half_max_ratio : half_max_ratio;
     x = center + (sin_lookup(angle) * pomodoro_width + round_factor) / TRIG_MAX_RATIO;
     if (mm % 5 == 0) {
+	#ifdef PBL_COLOR
       graphics_context_set_text_color(ctx, GColorBlack);
+    #else
+      graphics_context_set_text_color(ctx, GColorBlack);
+
+    #endif
       snprintf(buffer, sizeof("00"), "%0d", mm);
       graphics_draw_text(ctx, buffer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GRect(x - 15, 0, 30, 24), GTextOverflowModeFill, GTextAlignmentCenter, NULL);
       graphics_draw_rect(ctx, GRect(x - 1, 27, 2, 8));
@@ -434,7 +439,7 @@ static void window_load(Window *window) {
   relax_minute_layer = text_layer_create(bounds);
   text_layer_set_text_alignment(relax_minute_layer, GTextAlignmentCenter);
   text_layer_set_font(relax_minute_layer, relax_font);
-  text_layer_set_background_color(relax_minute_layer, GColorBlack);
+  text_layer_set_background_color(relax_minute_layer, GColorClear);
   text_layer_set_text_color(relax_minute_layer, GColorWhite);
   layer_add_child(bitmap_layer_get_layer(relax_layer), text_layer_get_layer(relax_minute_layer));
   
@@ -442,7 +447,7 @@ static void window_load(Window *window) {
   relax_second_layer = text_layer_create(bounds);
   text_layer_set_text_alignment(relax_second_layer, GTextAlignmentCenter);
   text_layer_set_font(relax_second_layer, relax_font);
-  text_layer_set_background_color(relax_second_layer, GColorBlack);
+  text_layer_set_background_color(relax_second_layer, GColorClear);
   text_layer_set_text_color(relax_second_layer, GColorWhite);
   layer_add_child(bitmap_layer_get_layer(relax_layer), text_layer_get_layer(relax_second_layer));
   
@@ -451,7 +456,12 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(pause_text_layer, GTextAlignmentCenter);
   text_layer_set_font(pause_text_layer, pause_font);
   text_layer_set_background_color(pause_text_layer, GColorClear);
-  text_layer_set_text_color(pause_text_layer, GColorBlack);
+  #ifdef PBL_COLOR
+	text_layer_set_text_color(pause_text_layer, GColorWhite);
+  #else
+    text_layer_set_text_color(pause_text_layer, GColorBlack);
+  #endif
+  
   text_layer_set_text(pause_text_layer, "STOPPED");
   layer_add_child(bitmap_layer_get_layer(pause_layer), text_layer_get_layer(pause_text_layer));
   

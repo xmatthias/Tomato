@@ -32,6 +32,7 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
+
 typedef struct SettingParams {
   int default_value;
   int min_value;
