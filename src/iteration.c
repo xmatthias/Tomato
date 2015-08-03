@@ -28,6 +28,11 @@ static void initialise_ui(void) {
   // s_count_layer
   s_count_layer = text_layer_create(GRect(24, 41, 100, 78));
   text_layer_set_background_color(s_count_layer, GColorClear);
+  #ifdef PBL_COLOR
+	text_layer_set_text_color(s_count_layer, GColorWhite);
+  #else
+	text_layer_set_text_color(s_count_layer, GColorBlack);
+  #endif
   text_layer_set_text(s_count_layer, "0");
   text_layer_set_text_alignment(s_count_layer, GTextAlignmentCenter);
   text_layer_set_font(s_count_layer, s_res_font_roboto_70);

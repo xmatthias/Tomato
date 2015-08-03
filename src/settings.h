@@ -24,7 +24,7 @@
 #define WAKEUP_ID_KEY 10
 
 #define LAST_TIME_DEFAULT 0
-#define STATE_DEFAULT 0
+#define STATE_DEFAULT 2 //start in pause-mode
 #define CALENDAR_DEFAULT ((Calendar){time(NULL), {}})
   
 #include "pebble.h"

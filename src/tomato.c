@@ -19,6 +19,7 @@ static TextLayer *relax_second_layer;
 static Layer *scale_layer;
 
 static TextLayer *pause_text_layer;
+static TextLayer *pause_arrow_layer;
 
 static GFont time_font;
 
@@ -461,9 +462,15 @@ static void window_load(Window *window) {
   #else
     text_layer_set_text_color(pause_text_layer, GColorBlack);
   #endif
-  
   text_layer_set_text(pause_text_layer, "STOPPED");
   layer_add_child(bitmap_layer_get_layer(pause_layer), text_layer_get_layer(pause_text_layer));
+  
+  pause_arrow_layer = text_layer_create((GRect) { .origin = {window_width - 20, window_height - 44}, .size = { 30, 30 } });
+  text_layer_set_text_color(pause_arrow_layer, GColorWhite);
+  text_layer_set_background_color(pause_arrow_layer, GColorClear);
+  text_layer_set_font(pause_arrow_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text(pause_arrow_layer, ">");
+  layer_add_child(bitmap_layer_get_layer(pause_layer), text_layer_get_layer(pause_arrow_layer));
   
   const int clock_height = 22;
 
